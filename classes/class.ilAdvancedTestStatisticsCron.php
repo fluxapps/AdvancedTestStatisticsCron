@@ -129,14 +129,17 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 				}
 				return false;
 			case 2:
-				if($lastrun + 2629743 >= date('U')){
+				if ($lastrun + 2629743 >= date('U')) {
 					return true;
 				}
 				return false;
 		}
 	}
 
-
+    /**
+     * @param $trigger xatsTriggers
+     * @return bool
+     */
 	public function checkTrigger($trigger) {
 		$class = new ilAdvancedTestStatisticsAggResults();
 		$finishedtests = $class->getTotalFinishedTests($this->ref_id);
@@ -151,7 +154,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 		$value = $trigger->getValue();
 
 		//if True trigger is a question
-		if ($triggername > 12) {
+		if (is_int($triggername)) {
 			$valuereached = 100;
 		} else {
 			$valuereached = ilAdvancedTestStatisticsConstantTranslator::getValues($triggername, $this->ref_id);
@@ -205,10 +208,9 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 
 		$sender = new ilAdvancedTestStatisticsSender();
 		try {
-			$sender->createNotification($this->ref_id_course, $trigger->getUserId(), $trigger->getRefId());
-			$object = xatsTriggers::where(array('id' => $trigger->getId()));
-			$object->setLastRun(date('U'));
-			$object->save();
+			$sender->createNotification($this->ref_id_course, $trigger);
+            $trigger->setLastRun(date('U'));
+            $trigger->save();
 		} catch (Exception $exception) {
 			$this->result = new ilCronJobResult();
 			$this->result->setStatus(ilCronJobResult::STATUS_CRASHED);
