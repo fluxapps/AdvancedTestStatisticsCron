@@ -175,14 +175,17 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 
 		switch ($interval) {
 			case 0:
-				return true;
+			    if ($lastrun + 86400 <= date('U')) {
+			        return true;
+                }
+				return false;
 			case 1:
-				if ($lastrun + 604800 >= date('U')) {
+				if ($lastrun + 604800 <= date('U')) {
 					return true;
 				}
 				return false;
 			case 2:
-				if ($lastrun + 2629743 >= date('U')) {
+				if ($lastrun + 2629743 <= date('U')) {
 					return true;
 				}
 				return false;
