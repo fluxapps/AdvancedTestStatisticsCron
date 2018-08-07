@@ -14,7 +14,7 @@ class ilAdvancedTestStatisticsCronPlugin extends ilCronHookPlugin {
 
 
 	public static function getInstance(){
-		if(isset(self::$instance)){
+		if(!isset(self::$instance)){
 			self::$instance = new self();
 		}
 		return self::$instance;
@@ -35,6 +35,38 @@ class ilAdvancedTestStatisticsCronPlugin extends ilCronHookPlugin {
 
 
 	public function getCronJobInstance($a_job_id) {
-return new ilAdvancedTestStatisticsCron();
+        return new ilAdvancedTestStatisticsCron();
 	}
+
+    /**
+     * @return ilObjCourse
+     * @throws Exception
+     */
+    public function getParentCourse($ref_id = 0) {
+        $ref_id = $ref_id ? $ref_id : $_GET['ref_id'];
+        require_once 'Services/Object/classes/class.ilObjectFactory.php';
+        $parent = ilObjectFactory::getInstanceByRefId($this->getParentCourseId($ref_id));
+
+        return $parent;
+    }
+
+
+    /**
+     * @param $ref_id
+     *
+     * @return int
+     * @throws Exception
+     */
+    public function getParentCourseId($ref_id) {
+        global $tree;
+        require_once 'Services/Object/classes/class.ilObject2.php';
+        while (!in_array(ilObject2::_lookupType($ref_id, true), array( 'crs', 'grp' ))) {
+            if ($ref_id == 1 || !$ref_id) {
+                throw new Exception("Parent of ref id {$ref_id} is neither course nor group.");
+            }
+            $ref_id = $tree->getParentId($ref_id);
+        }
+
+        return $ref_id;
+    }
 }

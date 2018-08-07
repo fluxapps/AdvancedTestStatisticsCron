@@ -2,6 +2,7 @@
 
 require_once './Services/Cron/classes/class.ilCronJob.php';
 require_once './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/AdvancedTestStatistics/ActiveRecords/xatsTriggers.php';
+require_once './Customizing/global/plugins/Services/Cron/CronHook/AdvancedTestStatisticsCron/classes/class.ilAdvancedTestStatisticsCronPlugin.php';
 
 class ilAdvancedTestStatisticsCron extends ilCronJob {
 
@@ -32,70 +33,110 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 	protected $usr_ids;
 
 
-	public function __construct() {
+    /**
+     * ilAdvancedTestStatisticsCron constructor.
+     */
+    public function __construct() {
 		global $tree;
 		$this->tree = $tree;
+		$this->pl = ilAdvancedTestStatisticsCronPlugin::getInstance();
 	}
 
 
-	public function getTitle() {
+    /**
+     * @return string
+     */
+    public function getTitle() {
 		return "Cronjob for triggerfunctions of the statistics plugin";
 	}
 
 
-	public function getDescription() {
+    /**
+     * @return string
+     */
+    public function getDescription() {
 		return "Checks if triggerfunctions are statisfied";
 	}
 
 
-	public function getId() {
+    /**
+     * @return string
+     */
+    public function getId() {
 		return self::CRON_ID;
 	}
 
 
-	public function hasAutoActivation() {
+    /**
+     * @return bool
+     */
+    public function hasAutoActivation() {
 		return true;
 	}
 
 
-	public function hasFlexibleSchedule() {
+    /**
+     * @return bool
+     */
+    public function hasFlexibleSchedule() {
 		return false;
 	}
 
 
-	public function getDefaultScheduleType() {
+    /**
+     * @return int
+     */
+    public function getDefaultScheduleType() {
 		return self::SCHEDULE_TYPE_DAILY;
 	}
 
 
-	public function getDefaultScheduleValue() {
+    /**
+     * @return array|int
+     */
+    public function getDefaultScheduleValue() {
 		return 1;
 	}
 
 
-	public function run() {
-		$triggers = xatsTriggers::get();
+    /**
+     * @return ilCronJobResult
+     */
+    public function run() {
+	    try {
+            $triggers = xatsTriggers::get();
 
-		foreach ($triggers as $trigger) {
-			if (!$this->checkDate($trigger)) {
-				continue;
-			}
-			if (!$this->checkInterval($trigger)) {
-				continue;
-			}
-			if (!$this->checkTrigger($trigger)) {
-				continue;
-			}
-		}
+            foreach ($triggers as $trigger) {
+                if (!$this->checkDate($trigger)) {
+                    continue;
+                }
+                if (!$this->checkInterval($trigger)) {
+                    continue;
+                }
+                if (!$this->checkPrecondition($trigger)) {
+                    continue;
+                }
+                if (!$this->checkTrigger($trigger)) {
+                    continue;
+                }
+            }
 
-		$this->result = new ilCronJobResult();
-		$this->result->setStatus(ilCronJobResult::STATUS_OK);
+            $this->result = new ilCronJobResult();
+            $this->result->setStatus(ilCronJobResult::STATUS_OK);
+        } catch (Exception $exception) {
+            $this->result = new ilCronJobResult();
+            $this->result->setStatus(ilCronJobResult::STATUS_CRASHED);
+        }
 
-		return $this->result;
-	}
+        return $this->result;
+    }
 
 
-	public function checkDate($trigger) {
+    /**
+     * @param $trigger
+     * @return bool
+     */
+    public function checkDate($trigger) {
 		if ($trigger->getDatesender() > date('U')) {
 			return false;
 		}
@@ -104,19 +145,31 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 	}
 
 
-	public function checkPrecondition($trigger) {
+    /**
+     * @param xatsTrigger|xaqsTrigger $trigger
+     * @return bool
+     */
+    public function checkPrecondition($trigger) {
 		$class = new ilAdvancedTestStatisticsAggResults();
 		$finishedtests = $class->getTotalFinishedTests($trigger->getRefId());
-		$course_members = count($this->usr_ids);
+        $this->ref_id_course = $this->pl->getParentCourseId($trigger->getRefId());
+        $usr_ids = ilCourseMembers::getData($this->ref_id_course);
+		$course_members = count($usr_ids);
 
 		// Check if enough people finished the test
 		if ((100 / $course_members) * $finishedtests < $trigger->getUserPercentage()) {
 			return false;
 		}
+
+		return true;
 	}
 
 
-	public function checkInterval($trigger) {
+    /**
+     * @param $trigger
+     * @return bool
+     */
+    public function checkInterval($trigger) {
 		$interval = $trigger->getIntervalls();
 		$lastrun = $trigger->getLastRun();
 
@@ -141,79 +194,42 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
      * @return bool
      */
 	public function checkTrigger($trigger) {
-		$class = new ilAdvancedTestStatisticsAggResults();
-		$finishedtests = $class->getTotalFinishedTests($this->ref_id);
-		$course_members = count($this->usr_ids);
-
-		// Check if enough people finished the test
-		if ((100 / $course_members) * $finishedtests < $trigger->getUserPercentage()) {
-			return false;
-		}
-
 		$triggername = $trigger->getTriggerName();
-		$value = $trigger->getValue();
+		$trigger_value = $trigger->getValue();
+        $values_reached = ilAdvancedTestStatisticsConstantTranslator::getValues($triggername,$trigger->getRefId());
+        $operator = $trigger->getOperatorFormatted();
+        $trigger_values = '';
 
-		//if True trigger is a question
-		if (is_int($triggername)) {
-			$valuereached = 100;
-		} else {
-			$valuereached = ilAdvancedTestStatisticsConstantTranslator::getValues($triggername, $this->ref_id);
-		}
+        switch ($triggername) {
+            case 'qst_percentage':
+                $trigger_values .= "\n";
+                foreach ($values_reached as $qst_id => $value_reached) {
+                    if (!eval('return ' . $value_reached . ' ' . $operator . ' ' . $trigger_value . ';')) {
+                        unset($values_reached[$qst_id]);
+                    } else {
+                        $trigger_values .= '"' . assQuestion::_instanciateQuestion($qst_id)->getTitle() . '"' . ': ';
+                        $trigger_values .= $value_reached . "\n";
+                    }
+                }
 
-		$operator = ilAdvancedTestStatisticsConstantTranslator::getOperatorforKey($trigger->getOperator());
-
-		switch ($operator) {
-			case '<':
-				if ($valuereached < $value) {
-					break;
-				}
-
-				return false;
-			case '>':
-				if ($valuereached > $value) {
-					break;
-				}
-
-				return false;
-			case '=':
-				if ($valuereached == $value) {
-					break;
-				}
-
-				return false;
-			case '>=':
-				if ($valuereached == $value) {
-					break;
-				}
-
-				return false;
-			case '<=':
-				if ($valuereached <= $value) {
-					break;
-				}
-
-				return false;
-			case '!=':
-				if ($valuereached != $value) {
-					break;
-				}
-
-				return false;
-			default:
-				break;
-		}
+                if (empty($values_reached)) {
+                    return false;
+                }
+                break;
+            default:
+                if (!eval('return ' . $values_reached . ' ' . $operator . ' ' . $trigger_value . ';')) {
+                    return false;
+                }
+                $trigger_values = $values_reached;
+                break;
+        }
 
 		$this->ref_id_course = $this->tree->getParentId($trigger->getRefId());
 		$this->usr_ids = ilCourseMembers::getData($this->ref_id_course);
 
 		$sender = new ilAdvancedTestStatisticsSender();
-		try {
-			$sender->createNotification($this->ref_id_course, $trigger);
-            $trigger->setLastRun(date('U'));
-            $trigger->save();
-		} catch (Exception $exception) {
-			$this->result = new ilCronJobResult();
-			$this->result->setStatus(ilCronJobResult::STATUS_CRASHED);
-		}
+        $sender->createNotification($this->ref_id_course, $trigger, $trigger_values);
+        $trigger->setLastRun(date('U'));
+        $trigger->save();
 	}
 }
