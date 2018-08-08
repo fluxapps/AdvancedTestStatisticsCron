@@ -104,7 +104,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
      */
     public function run() {
 	    try {
-            $triggers = xatsTriggers::get();
+            $triggers = array_merge(xatsTriggers::get(), xaqsTriggers::get());
 
             foreach ($triggers as $trigger) {
                 if (!$this->checkDate($trigger)) {
@@ -148,18 +148,18 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
     /**
      * @param xatsTrigger|xaqsTrigger $trigger
      * @return bool
+     * @throws Exception
      */
     public function checkPrecondition($trigger) {
 		$class = new ilAdvancedTestStatisticsAggResults();
-		$finishedtests = $class->getTotalFinishedTests($trigger->getRefId());
-        $this->ref_id_course = $this->pl->getParentCourseId($trigger->getRefId());
-        $usr_ids = ilCourseMembers::getData($this->ref_id_course);
-		$course_members = count($usr_ids);
 
-		// Check if enough people finished the test
-		if ((100 / $course_members) * $finishedtests < $trigger->getUserPercentage()) {
-			return false;
-		}
+		if ($trigger instanceof xatsTriggers) { // question pool triggers are checked later, since every question has to be checked
+            $finishedtests = $class->getTotalFinishedTests($trigger->getRefId());
+            // Check if enough people finished the test
+            if ($finishedtests < $trigger->getUserPercentage()) {
+                return false;
+            }
+        }
 
 		return true;
 	}
@@ -199,7 +199,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 	public function checkTrigger($trigger) {
 		$triggername = $trigger->getTriggerName();
 		$trigger_value = $trigger->getValue();
-        $values_reached = ilAdvancedTestStatisticsConstantTranslator::getValues($triggername,$trigger->getRefId());
+        $values_reached = $trigger instanceof xatsTriggers ? ilAdvancedTestStatisticsConstantTranslator::getValues($trigger) : ilAdvancedQuestionPoolStatisticsConstantTranslator::getValues($trigger);
         $operator = $trigger->getOperatorFormatted();
         $trigger_values = '';
 
