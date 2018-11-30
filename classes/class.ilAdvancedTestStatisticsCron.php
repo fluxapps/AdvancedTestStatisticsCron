@@ -227,7 +227,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
                 break;
         }
 
-		$this->ref_id_course = $this->tree->getParentId($trigger->getRefId());
+		$this->ref_id_course = $this->pl->getParentCourseId($trigger->getRefId());
 		$this->usr_ids = ilCourseMembers::getData($this->ref_id_course);
 
 		$sender = new ilAdvancedTestStatisticsSender();
