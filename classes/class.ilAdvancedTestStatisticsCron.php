@@ -2,6 +2,7 @@
 
 require_once './Services/Cron/classes/class.ilCronJob.php';
 require_once './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/AdvancedTestStatistics/ActiveRecords/xatsTriggers.php';
+require_once './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/AdvancedQuestionPoolStatistics/ActiveRecords/xaqsTriggers.php';
 require_once './Customizing/global/plugins/Services/Cron/CronHook/AdvancedTestStatisticsCron/classes/class.ilAdvancedTestStatisticsCronPlugin.php';
 
 class ilAdvancedTestStatisticsCron extends ilCronJob {
