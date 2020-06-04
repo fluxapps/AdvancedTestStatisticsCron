@@ -148,7 +148,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 
 
     /**
-     * @param xatsTrigger|xaqsTrigger $trigger
+     * @param xatsTriggers|xaqsTriggers $trigger
      * @return bool
      * @throws Exception
      */
@@ -158,7 +158,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 		if ($trigger instanceof xatsTriggers) { // question pool triggers are checked later, since every question has to be checked
             $finishedtests = $class->getTotalFinishedTests($trigger->getRefId());
             // Check if enough people finished the test
-            if ($finishedtests < $trigger->getUserPercentage()) {
+            if ($finishedtests < $trigger->getUserThreshold()) {
                 return false;
             }
         }
@@ -237,7 +237,11 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 		$this->usr_ids = ilCourseMembers::getData($this->ref_id_course);
 
 		$sender = new ilAdvancedTestStatisticsSender();
-        $sender->createNotification($this->ref_id_course, $trigger, $trigger_values);
+		try {
+            $sender->createNotification($this->ref_id_course, $trigger, $trigger_values);
+        } catch (ilException $e) {
+		    //
+        }
         $trigger->setLastRun(date('U'));
         $trigger->save();
 	}
