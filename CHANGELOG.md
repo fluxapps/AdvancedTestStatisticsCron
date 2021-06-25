@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.1.0]
+- dropped ilias 5.3 support
+- fixed bug leading to crash
+
 ## [1.0.1]
 - bugfix: missing import when executing cronjob from system 
 
