@@ -221,12 +221,14 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
         }
 		$this->usr_ids = ilCourseMembers::getData($this->ref_id_course);
 
-        if ($trigger instanceof xatsTriggers) {
-            $sender =  new ilAdvancedTestStatisticsSender();
-            $sender->createNotification($this->ref_id_course, $trigger, $trigger_values);
-        } else {
-            $sender = new ilAdvancedQuestionPoolStatisticsSender();
-            $sender->createNotification($this->ref_id_course, 0, $trigger->getRefId(), $trigger, $trigger_values);
+        if ($trigger->getUserId()) {
+            if ($trigger instanceof xatsTriggers) {
+                $sender =  new ilAdvancedTestStatisticsSender();
+                $sender->createNotification($this->ref_id_course, $trigger, $trigger_values);
+            } else {
+                $sender = new ilAdvancedQuestionPoolStatisticsSender();
+                $sender->createNotification($this->ref_id_course, 0, $trigger->getRefId(), $trigger, $trigger_values);
+            }
         }
         $trigger->setLastRun(date('U'));
         $trigger->save();
