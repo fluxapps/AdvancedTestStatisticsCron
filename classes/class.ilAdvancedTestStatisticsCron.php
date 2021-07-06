@@ -104,30 +104,17 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
      * @return ilCronJobResult
      */
     public function run() {
-	    try {
-            $triggers = array_merge(xatsTriggers::get(), xaqsTriggers::get());
+        $triggers = array_merge(xatsTriggers::get(), xaqsTriggers::get());
 
-            foreach ($triggers as $trigger) {
-                if (!$this->checkDate($trigger)) {
-                    continue;
-                }
-                if (!$this->checkInterval($trigger)) {
-                    continue;
-                }
-                if (!$this->checkPrecondition($trigger)) {
-                    continue;
-                }
-                if (!$this->checkTrigger($trigger)) {
-                    continue;
-                }
-            }
-
-            $this->result = new ilCronJobResult();
-            $this->result->setStatus(ilCronJobResult::STATUS_OK);
-        } catch (Exception $exception) {
-            $this->result = new ilCronJobResult();
-            $this->result->setStatus(ilCronJobResult::STATUS_CRASHED);
+        foreach ($triggers as $trigger) {
+            $this->checkDate($trigger)
+            && $this->checkInterval($trigger)
+            && $this->checkPrecondition($trigger)
+            && $this->checkTrigger($trigger);
         }
+
+        $this->result = new ilCronJobResult();
+        $this->result->setStatus(ilCronJobResult::STATUS_OK);
 
         return $this->result;
     }
