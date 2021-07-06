@@ -1,10 +1,9 @@
 <?php
 
 require_once './Services/Cron/classes/class.ilCronJob.php';
-require_once './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/AdvancedTestStatistics/ActiveRecords/xatsTriggers.php';
-require_once './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/AdvancedQuestionPoolStatistics/ActiveRecords/xaqsTriggers.php';
 require_once './Customizing/global/plugins/Services/Cron/CronHook/AdvancedTestStatisticsCron/classes/class.ilAdvancedTestStatisticsCronPlugin.php';
-require_once './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/AdvancedTestStatistics/classes/AggregatedTestResultView/class.ilAdvancedTestStatisticsAggResults.php';
+require_once './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/AdvancedTestStatistics/classes/class.ilAdvancedTestStatisticsPlugin.php';
+require_once './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/AdvancedQuestionPoolStatistics/classes/class.ilAdvancedQuestionPoolStatisticsPlugin.php';
 
 class ilAdvancedTestStatisticsCron extends ilCronJob {
 
