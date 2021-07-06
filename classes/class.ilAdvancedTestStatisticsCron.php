@@ -140,7 +140,15 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
      */
     public function checkPrecondition($trigger) {
 		if ($trigger instanceof xatsTriggers) { // question pool triggers are checked later, since every question has to be checked
-            $class = new ilAdvancedTestStatisticsAggResults($trigger->getRefId());
+		    if (!ilObject::_exists($trigger->getRefId(), true)) {
+		        $trigger->delete();
+		        return false;
+            }
+		    try {
+                $class = new ilAdvancedTestStatisticsAggResults($trigger->getRefId());
+            } catch (Exception $e) {
+		        return false;
+            }
             $finishedtests = $class->getTotalFinishedTests($trigger->getRefId());
             // Check if enough people finished the test
             if ($finishedtests < $trigger->getUserThreshold()) {
