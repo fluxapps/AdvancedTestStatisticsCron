@@ -104,6 +104,9 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
      * @return ilCronJobResult
      */
     public function run() {
+        global $DIC;
+        // this is because assTextQuestion fetches the tpl, which is not available in cron context
+        $DIC['tpl'] = true;
         $triggers = array_merge(xatsTriggers::get(), xaqsTriggers::get());
 
         foreach ($triggers as $trigger) {
