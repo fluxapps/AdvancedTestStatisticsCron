@@ -112,7 +112,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
         $triggers = array_merge(xatsTriggers::get(), xaqsTriggers::get());
 
         foreach ($triggers as $trigger) {
-            $DIC->logger()->root()->info('checking trigger with id ' . $trigger->getId());
+//            $DIC->logger()->root()->info('checking trigger with id ' . $trigger->getId());
             $this->checkDate($trigger)
             && $this->checkInterval($trigger)
             && $this->checkPrecondition($trigger)
