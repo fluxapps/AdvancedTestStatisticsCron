@@ -106,10 +106,13 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
     public function run() {
         global $DIC;
         // this is because assTextQuestion fetches the tpl, which is not available in cron context
-        $DIC['tpl'] = true;
+        if (!isset($DIC['tpl'])) {
+            $DIC['tpl'] = true;
+        }
         $triggers = array_merge(xatsTriggers::get(), xaqsTriggers::get());
 
         foreach ($triggers as $trigger) {
+            $DIC->logger()->root()->info('checking trigger with id ' . $trigger->getId());
             $this->checkDate($trigger)
             && $this->checkInterval($trigger)
             && $this->checkPrecondition($trigger)
@@ -142,11 +145,14 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
      * @throws Exception
      */
     public function checkPrecondition($trigger) {
+        if (!ilObject::_exists($trigger->getRefId(), true)) {
+            $trigger->delete();
+            return false;
+        }
+        if (ilObject::_isInTrash($trigger->getRefId())) {
+            return false;
+        }
 		if ($trigger instanceof xatsTriggers) { // question pool triggers are checked later, since every question has to be checked
-		    if (!ilObject::_exists($trigger->getRefId(), true)) {
-		        $trigger->delete();
-		        return false;
-            }
 		    try {
                 $class = new ilAdvancedTestStatisticsAggResults($trigger->getRefId());
             } catch (Exception $e) {
