@@ -158,7 +158,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
             } catch (Exception $e) {
 		        return false;
             }
-            $finishedtests = $class->getTotalFinishedTests($trigger->getRefId());
+            $finishedtests = $class->getTotalFinishedTests($trigger->getRefId(), true);
             // Check if enough people finished the test
             if ($finishedtests < $trigger->getUserThreshold()) {
                 return false;
