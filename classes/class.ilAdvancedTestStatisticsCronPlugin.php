@@ -43,11 +43,10 @@ class ilAdvancedTestStatisticsCronPlugin extends ilCronHookPlugin {
      * @throws Exception
      */
     public function getParentCourse($ref_id = 0) {
-        $ref_id = $ref_id ? $ref_id : $_GET['ref_id'];
+        $ref_id = $ref_id ?: $_GET['ref_id'];
         require_once 'Services/Object/classes/class.ilObjectFactory.php';
-        $parent = ilObjectFactory::getInstanceByRefId($this->getParentCourseId($ref_id));
 
-        return $parent;
+        return ilObjectFactory::getInstanceByRefId($this->getParentCourseId($ref_id));
     }
 
 

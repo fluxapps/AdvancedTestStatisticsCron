@@ -43,14 +43,12 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 		$this->pl = ilAdvancedTestStatisticsCronPlugin::getInstance();
 	}
 
-
     /**
      * @return string
      */
     public function getTitle() {
 		return "Cronjob for triggerfunctions of the statistics plugin";
 	}
-
 
     /**
      * @return string
@@ -112,11 +110,15 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
         $triggers = array_merge(xatsTriggers::get(), xaqsTriggers::get());
 
         foreach ($triggers as $trigger) {
-//            $DIC->logger()->root()->info('checking trigger with id ' . $trigger->getId());
-            $this->checkDate($trigger)
+            $DIC->logger()->root()->info('checking trigger with id ' . $trigger->getId());
+            if ($this->checkDate($trigger)
             && $this->checkInterval($trigger)
             && $this->checkPrecondition($trigger)
-            && $this->checkTrigger($trigger);
+            && $this->checkTrigger($trigger)) {
+                $DIC->logger()->root()->info('conditions fulfilled & notification sent for trigger with id ' . $trigger->getId());
+            } else {
+                $DIC->logger()->root()->info('conditions not fulfilled for trigger with id ' . $trigger->getId());
+            }
         }
 
         $this->result = new ilCronJobResult();
@@ -163,6 +165,12 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
             if ($finishedtests < $trigger->getUserThreshold()) {
                 return false;
             }
+
+            // check if last trigger was before latest new test run
+            if ($trigger->getLastRun() == 0 ||
+                ($class->getLatestTestRunTimestamp($trigger->getRefId()) < $trigger->getLastRun())) {
+                return false;
+            }
         }
 
 		return true;
@@ -170,7 +178,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 
 
     /**
-     * @param $trigger
+     * @param $trigger xatsTriggers|xaqsTriggers
      * @return bool
      */
     public function checkInterval($trigger) {
@@ -196,6 +204,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 		}
 	}
 
+
     /**
      * @param $trigger xatsTriggers
      * @return bool
@@ -209,6 +218,10 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
 
         switch ($triggername) {
             case 'qst_percentage':
+                $qst_ids = array_keys($values_reached);
+                if (!$this->checkLastQuestionAnsweredAfter($qst_ids, (int) $trigger->getLastRun())) {
+                    return false;
+                }
                 $trigger_values .= "\n";
                 foreach ($values_reached as $qst_id => $value_reached) {
                     if (!eval('return ' . $value_reached . ' ' . $operator . ' ' . $trigger_value . ';')) {
@@ -249,5 +262,17 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
         }
         $trigger->setLastRun(date('U'));
         $trigger->save();
+        return true;
 	}
+
+    private function checkLastQuestionAnsweredAfter(array $qst_ids, int $timestamp) : bool
+    {
+        global $DIC;
+        $query = 'SELECT * FROM tst_test_result WHERE tstamp > ' . $timestamp .
+            ' AND question_fi IN (SELECT question_id FROM qpl_questions WHERE ' .
+            $DIC->database()->in('original_id', $qst_ids, false, 'integer') .
+            ' OR ' . $DIC->database()->in('question_id', $qst_ids, false, 'integer') . ')';
+        $res = $DIC->database()->query($query);
+        return (bool) $res->numRows();
+    }
 }
