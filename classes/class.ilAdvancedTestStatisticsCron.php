@@ -167,7 +167,7 @@ class ilAdvancedTestStatisticsCron extends ilCronJob {
             }
 
             // check if last trigger was before latest new test run
-            if ($trigger->getLastRun() == 0 ||
+            if ($trigger->getLastRun() != 0 &&
                 ($class->getLatestTestRunTimestamp($trigger->getRefId()) < $trigger->getLastRun())) {
                 return false;
             }
